@@ -1,0 +1,2 @@
+This program simulate multiples particles under the force of gravity.
+The used language is c# and all the graphics are drawn with SFML library
