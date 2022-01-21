@@ -1,4 +1,6 @@
-﻿using SFML.Graphics;
+﻿using System;
+using System.Collections.Generic;
+using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
 using SpaceSim.BarnesHut;
@@ -11,8 +13,10 @@ namespace SpaceSim
         List<IObject> _obj = new List<IObject>();
         Clock _clock;
         float _elapsedTime;
+
+        //Test
         QuadTree _qt;
-        List<Point> _points = new List<Point>();
+        ParticleSystem _ps = new ParticleSystem();
 
         //État du clique gauche de la souris
         bool leftClick = false;
@@ -26,6 +30,7 @@ namespace SpaceSim
         public void Run()
         {
             Load();
+            Console.CursorVisible = false;
 
             while (_window.IsOpen)
             {
@@ -65,15 +70,16 @@ namespace SpaceSim
         void Load()
         {
             Random rnd = new Random();
-            _qt = new QuadTree(new Rectangle(_window.Size.X/2, _window.Size.Y / 2, _window.Size.X / 2, _window.Size.Y / 2), 2);
+            _qt = new QuadTree(new Rectangle(_window.Size.X/2, _window.Size.Y / 2, _window.Size.X / 2, _window.Size.Y / 2), 10);
             _obj.Add(new Camera(_window.Size.X, _window.Size.Y, 500));
-            //int nbrOfPoints = 1000;
-            //for (int i = 0; i < nbrOfPoints; i++)
-            //{
-            //    Point p = new Point(rnd.Next((int)_window.Size.X), rnd.Next((int)_window.Size.Y), 0);
-            //    _points.Add(p);
-            //    _qt.Insert(p);
-            //}
+            _ps.GenBodies(500, 1000, 20000, new Vector2f(400, 300), 400000);
+            _ps.RndVel(600000, 600000,0);
+            Particle pMassive = new Particle(_ps.GetTotalMass()*999, 400000, Color.Blue, new Vector2f(400, 300 + 400000 * 4));
+            _ps.AddBody(pMassive);
+            foreach(Particle p in _ps.Bodies)
+            {
+                _qt.Insert(p);
+            }
         }
 
         /// <summary>
@@ -81,32 +87,69 @@ namespace SpaceSim
         /// </summary>
         void Update()
         {
-            float mx = Mouse.GetPosition(_window).X;
-            float my = Mouse.GetPosition(_window).Y;
-            float tx = mx / _window.Size.X;
-            float ty = my / _window.Size.Y;
-            float nx = tx * (_obj[0] as Camera).View.Size.X;
-            float ny = ty * (_obj[0] as Camera).View.Size.Y;
-            float ox = (_obj[0] as Camera).View.Center.X - (_obj[0] as Camera).View.Size.X / 2;
-            float oy = (_obj[0] as Camera).View.Center.Y - (_obj[0] as Camera).View.Size.Y / 2;
-            Console.WriteLine("{0:0.00}               ", ox+nx);
-            Console.WriteLine("{0:0.00}               ", oy+ny);
-            if (Mouse.IsButtonPressed(Mouse.Button.Left))
+            ////Crée une particule au clique de souris
+            //float mx = Mouse.GetPosition(_window).X;
+            //float my = Mouse.GetPosition(_window).Y;
+            //float tx = mx / _window.Size.X;
+            //float ty = my / _window.Size.Y;
+            //float nx = tx * (_obj[0] as Camera).View.Size.X;
+            //float ny = ty * (_obj[0] as Camera).View.Size.Y;
+            //float ox = (_obj[0] as Camera).View.Center.X - (_obj[0] as Camera).View.Size.X / 2;
+            //float oy = (_obj[0] as Camera).View.Center.Y - (_obj[0] as Camera).View.Size.Y / 2;
+            //Console.WriteLine("{0:0.00}               ", ox+nx);
+            //Console.WriteLine("{0:0.00}               ", oy+ny);
+            //if (Mouse.IsButtonPressed(Mouse.Button.Left))
+            //{
+            //    if (!leftClick)
+            //    {
+            //        Particle p = new Particle(100,2,Color.White,new Vector2f(ox+nx, oy+ny));
+            //        _qt.Insert(p);
+            //    }
+            //    leftClick = true;
+            //}
+            //else
+            //{
+            //    leftClick = false;
+            //}
+
+            float minX = float.PositiveInfinity;
+            float maxX = float.NegativeInfinity;
+            float minY = float.PositiveInfinity;
+            float maxY = float.NegativeInfinity;
+
+            //Trouve la taille totale du rectangle
+            foreach(Particle p in _ps.Bodies)
             {
-                if (!leftClick)
+                float x = p.Position.X;
+                float y = p.Position.Y;
+                if(x < minX)
                 {
-                    Point p = new Point(ox+nx, oy+ny, 0);
-                    _points.Add(p);
-                    _qt.Insert(p);
+                    minX = x;
                 }
-                leftClick = true;
-            }
-            else
-            {
-                leftClick = false;
+                else if(x > maxX)
+                {
+                    maxX = x;
+                }
+                if(y < minY)
+                {
+                    minY = y;
+                }
+                else if(y > maxY)
+                {
+                    maxY = y;
+                }
             }
 
-            foreach(IObject obj in _obj)
+            float w = (maxX - minX) / 2;
+            float h = (maxY - minY) / 2;
+            _ps.Update(_elapsedTime);
+            _qt = new QuadTree(new Rectangle(w+minX,h+minY,w,h), 10);
+            foreach (Particle p in _ps.Bodies)
+            {
+                _qt.Insert(p);
+            }
+
+            foreach (IObject obj in _obj)
             {
                 obj.Update(_elapsedTime);
             }
@@ -117,10 +160,7 @@ namespace SpaceSim
         /// </summary>
         void Render()
         {
-            foreach(Point p in _points)
-            {
-                p.Draw(_window);
-            }
+            _ps.Render(_window);
             _qt.Draw(_window);
             foreach (IObject obj in _obj)
             {

@@ -174,7 +174,7 @@ namespace SpaceSim
                 do
                 {
                     //Génère une position aléatoirement
-                    position = new Vector2f(rnd.Next(-radius, radius), rnd.Next(-radius, radius));
+                    position = new Vector2f(rnd.Next((int)center.X - radius, (int)center.X + radius), rnd.Next((int)center.Y - radius, (int)center.Y + radius));
 
                     //Obtient la distance entre le centre du cercle de génération et la position du corps
                     float dx = position.X - center.X;
@@ -201,7 +201,7 @@ namespace SpaceSim
             {
                 Vector2f vel = _bodies[i].Velocity;
                 float speed = rnd.Next(min, max);
-                float heading = rnd.NextSingle() * (float)Math.PI * 2.0f;
+                float heading = (float)rnd.NextDouble() * (float)Math.PI * 2.0f;
                 vel.X = (float)Math.Cos(heading) * speed;
                 vel.Y = (float)Math.Sin(heading) * speed;
                 _bodies[i].Velocity = vel;
