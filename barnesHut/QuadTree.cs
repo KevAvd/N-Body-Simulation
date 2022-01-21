@@ -33,7 +33,7 @@ namespace SpaceSim.BarnesHut
         //Capacité du noeud
         readonly int capacity;
         //Contenu du noeud
-        List<Particle> points = new List<Particle>();
+        List<Particle> particles = new List<Particle>();
         //État du noeud
         bool divided = false;
         //Enfant du noeud
@@ -72,46 +72,43 @@ namespace SpaceSim.BarnesHut
             }
 
             //Vérifie si le noeud à la capacité d'accueillir un nouveau point
-            if(points.Count < capacity)
+            if(!divided)
             {
-                points.Add(p);
-            }
-            //Vérifie si le noeud à atteint sa capacité maximale
-            if (points.Count >= capacity)
-            {
-                //Divise le noeud si ce n'est pas déjà fait
-                if (!divided)
+                particles.Add(p);
+                if(particles.Count > capacity)
                 {
                     Subdivide();
-                    divided = true;
                 }
+            }
+            //Vérifie si le noeud à atteint sa capacité maximale
+            else
+            {
                 //Rajoute le nouveau point dans les enfants du noeud
-                else
-                {
-                    nw.Insert(p);
-                    ne.Insert(p);
-                    sw.Insert(p);
-                    se.Insert(p);
-                }
+                nw.Insert(p);
+                ne.Insert(p);
+                sw.Insert(p);
+                se.Insert(p);
             }
         }
 
         /// <summary>
         /// Divise le noeud actuel en quatre nouveau noeud
         /// </summary>
-        public void Subdivide()
+        void Subdivide()
         {
+            divided = true;
             nw = new QuadTree(new Rectangle(r.x - r.w / 2, r.y - r.h / 2, r.w / 2, r.h / 2), capacity);
             ne = new QuadTree(new Rectangle(r.x + r.w / 2, r.y - r.h / 2, r.w / 2, r.h / 2), capacity);
             sw = new QuadTree(new Rectangle(r.x - r.w / 2, r.y + r.h / 2, r.w / 2, r.h / 2), capacity);
             se = new QuadTree(new Rectangle(r.x + r.w / 2, r.y + r.h / 2, r.w / 2, r.h / 2), capacity);
-            foreach (Particle p in points)
+            foreach (Particle p in particles)
             { 
                 nw.Insert(p); 
                 ne.Insert(p); 
                 sw.Insert(p); 
                 se.Insert(p); 
             }
+            particles.Clear();
         }
 
         /// <summary>

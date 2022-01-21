@@ -72,11 +72,11 @@ namespace SpaceSim
             Random rnd = new Random();
             _qt = new QuadTree(new Rectangle(_window.Size.X/2, _window.Size.Y / 2, _window.Size.X / 2, _window.Size.Y / 2), 10);
             _obj.Add(new Camera(_window.Size.X, _window.Size.Y, 500));
-            _ps.GenBodies(500, 1000, 20000, new Vector2f(400, 300), 400000);
+            _ps.GenBodies(11, 1000, 20000, new Vector2f(400, 300), 400000);
             _ps.RndVel(600000, 600000,0);
             Particle pMassive = new Particle(_ps.GetTotalMass()*999, 400000, Color.Blue, new Vector2f(400, 300 + 400000 * 4));
             _ps.AddBody(pMassive);
-            foreach(Particle p in _ps.Bodies)
+            foreach (Particle p in _ps.Bodies)
             {
                 _qt.Insert(p);
             }
@@ -126,7 +126,7 @@ namespace SpaceSim
                 {
                     minX = x;
                 }
-                else if(x > maxX)
+                if(x > maxX)
                 {
                     maxX = x;
                 }
@@ -134,16 +134,16 @@ namespace SpaceSim
                 {
                     minY = y;
                 }
-                else if(y > maxY)
+                if(y > maxY)
                 {
                     maxY = y;
                 }
             }
 
-            float w = (maxX - minX) / 2;
-            float h = (maxY - minY) / 2;
+            float w = (maxX - minX) / 2 + 10;
+            float h = (maxY - minY) / 2 + 10;
             _ps.Update(_elapsedTime);
-            _qt = new QuadTree(new Rectangle(w+minX,h+minY,w,h), 10);
+            _qt = new QuadTree(new Rectangle(w + minX, h + minY, w, h), 10);
             foreach (Particle p in _ps.Bodies)
             {
                 _qt.Insert(p);
