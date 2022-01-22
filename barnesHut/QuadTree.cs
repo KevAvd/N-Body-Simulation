@@ -5,6 +5,11 @@ using SFML.System;
 
 namespace SpaceSim.BarnesHut
 {
+    enum NodeType
+    {
+        Root, NorthWest, NorthEast, SouthWest, SouthEast
+    }
+
     class Rectangle
     {
         public float x, y, w, h;
@@ -26,16 +31,45 @@ namespace SpaceSim.BarnesHut
         }
     }
 
+    struct CenterOfMass
+    {
+        float mass;
+        Vector2f position;
+
+        public CenterOfMass()
+        {
+            mass = 0f;
+            position = new Vector2f(0f,0f);
+        }
+
+        public float Mass
+        {
+            get { return mass; }
+            set { mass = value; }
+        }
+        public Vector2f Position
+        {
+            get { return position; }
+            set { position = value; }
+        }
+    }
+
     class QuadTree
     {
         //taille du noeud
         Rectangle r;
         //Capacité du noeud
-        readonly int capacity;
+        const int capacity = 1;
         //Contenu du noeud
         List<Particle> particles = new List<Particle>();
         //État du noeud
         bool divided = false;
+        //Type de noeud
+        NodeType type;
+        //Niveau du noeud
+        uint layer;
+        //Parent du noeud
+        QuadTree parent;
         //Enfant du noeud
         QuadTree nw;
         QuadTree ne;
@@ -47,12 +81,27 @@ namespace SpaceSim.BarnesHut
         /// </summary>
         /// <param name="r"> Zone du noeud </param>
         /// <param name="cap"> Capacité du noeud </param>
-        public QuadTree(Rectangle r, int cap)
+        public QuadTree(Rectangle r)
         {
             this.r = r;
-            capacity = cap;
+            parent = this;
+            type = NodeType.Root;
+            layer = 0;
         }
 
+        /// <summary>
+        /// Constructeur
+        /// </summary>
+        /// <param name="r"> Zone du noeud </param>
+        /// <param name="cap"> Capacité du noeud </param>
+        /// <param name="p"> Parent du noeud </param>
+        public QuadTree(Rectangle r, QuadTree p, NodeType t, uint l)
+        {
+            this.r = r;
+            parent = p;
+            type = t;
+            layer = l;
+        }
         /// <summary>
         /// Insert un point dans le noeud actuel
         /// </summary>
@@ -65,29 +114,24 @@ namespace SpaceSim.BarnesHut
                 return;
             }
 
-            //Vérifie si le noeud peut être divisé
-            if(r.w/2 < 1 || r.h/2 < 1)
-            {
-                return;
-            }
+            //Ajoute la particule
+            particles.Add(p);
 
-            //Vérifie si le noeud à la capacité d'accueillir un nouveau point
-            if(!divided)
+            //Ajoute la particule dans les enfants du noeud s'ils existent
+            if (divided)
             {
-                particles.Add(p);
-                if(particles.Count > capacity)
-                {
-                    Subdivide();
-                }
-            }
-            //Vérifie si le noeud à atteint sa capacité maximale
-            else
-            {
-                //Rajoute le nouveau point dans les enfants du noeud
                 nw.Insert(p);
                 ne.Insert(p);
                 sw.Insert(p);
                 se.Insert(p);
+            }
+            //Subdivise le noeud en 4 lorsque la capacité est dépassée
+            if(particles.Count > capacity)
+            {
+                if (!(r.w / 2 < 1 || r.h / 2 < 1))
+                {
+                    Subdivide();
+                }
             }
         }
 
@@ -97,10 +141,10 @@ namespace SpaceSim.BarnesHut
         void Subdivide()
         {
             divided = true;
-            nw = new QuadTree(new Rectangle(r.x - r.w / 2, r.y - r.h / 2, r.w / 2, r.h / 2), capacity);
-            ne = new QuadTree(new Rectangle(r.x + r.w / 2, r.y - r.h / 2, r.w / 2, r.h / 2), capacity);
-            sw = new QuadTree(new Rectangle(r.x - r.w / 2, r.y + r.h / 2, r.w / 2, r.h / 2), capacity);
-            se = new QuadTree(new Rectangle(r.x + r.w / 2, r.y + r.h / 2, r.w / 2, r.h / 2), capacity);
+            nw = new QuadTree(new Rectangle(r.x - r.w / 2, r.y - r.h / 2, r.w / 2, r.h / 2), this, NodeType.NorthWest, layer + 1);
+            ne = new QuadTree(new Rectangle(r.x + r.w / 2, r.y - r.h / 2, r.w / 2, r.h / 2), this, NodeType.NorthEast, layer + 1);
+            sw = new QuadTree(new Rectangle(r.x - r.w / 2, r.y + r.h / 2, r.w / 2, r.h / 2), this, NodeType.SouthWest, layer + 1);
+            se = new QuadTree(new Rectangle(r.x + r.w / 2, r.y + r.h / 2, r.w / 2, r.h / 2), this, NodeType.SouthEast, layer + 1);
             foreach (Particle p in particles)
             { 
                 nw.Insert(p); 
@@ -108,7 +152,87 @@ namespace SpaceSim.BarnesHut
                 sw.Insert(p); 
                 se.Insert(p); 
             }
-            particles.Clear();
+        }
+
+        public QuadTree GetParent()
+        {
+            if (parent != this)
+            {
+                return parent;
+            }
+            Console.WriteLine("[Error] Parent not found");
+            return this;
+        }
+        public QuadTree GetChild(NodeType child)
+        {
+            if (divided)
+            {
+                switch (child)
+                {
+                    case NodeType.NorthWest: return nw;
+                    case NodeType.NorthEast: return ne;
+                    case NodeType.SouthWest: return sw;
+                    case NodeType.SouthEast: return se;
+                }
+            }
+            Console.WriteLine("[Error] Child Not Found");
+            return this;
+        }
+        public QuadTree GetSibling(NodeType sibling)
+        {
+            if (parent != this)
+            {
+                return parent.GetChild(sibling);
+            }
+            Console.WriteLine("[Error] Siblings Not Found");
+            return this;
+        }
+        public QuadTree FoundParticleNode(Particle p)
+        {
+            if(this.type == NodeType.Root)
+            {
+                if (!particles.Contains(p))
+                {
+                    return null;
+                    Console.WriteLine("[Error] The QuadTree doesn't contain the particle");
+                }
+            }
+
+            if (!divided)
+            {
+                return this;
+            }
+
+            if (nw.Particles.Contains(p))
+            {
+                return nw.FoundParticleNode(p);
+            }
+            else if (ne.Particles.Contains(p))
+            {
+                return ne.FoundParticleNode(p);
+            }
+            else if (sw.Particles.Contains(p))
+            {
+                return sw.FoundParticleNode(p);
+            }
+            else if (se.Particles.Contains(p))
+            {
+                return se.FoundParticleNode(p);
+            }
+
+            return this;
+        }
+        public CenterOfMass GetCenterOfMass()
+        {
+            CenterOfMass com = new CenterOfMass();
+
+            foreach(Particle p in particles)
+            {
+                com.Position += p.Position;
+                com.Mass += p.Mass;
+            }
+
+            return com;
         }
 
         /// <summary>
@@ -128,6 +252,21 @@ namespace SpaceSim.BarnesHut
             if(nw != null) { nw.Draw(w); }
             if(se != null) { se.Draw(w); }
             if(sw != null) { sw.Draw(w); }
+        }
+
+        public uint Layer
+        {
+            get { return layer; }
+        }
+
+        public NodeType Type
+        {
+            get { return type; }
+        }
+
+        public List<Particle> Particles
+        {
+            get { return particles; }
         }
     }
 }

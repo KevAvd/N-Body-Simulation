@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using SFML.System;
 using SFML.Graphics;
 using SFML.Window;
+using SpaceSim.BarnesHut;
 
 namespace SpaceSim
 {
@@ -128,6 +129,7 @@ namespace SpaceSim
     internal class ParticleSystem : IObject
     {
         List<Particle> _bodies;
+        QuadTree qt;
 
         /// <summary>
         /// Constructeur
@@ -221,25 +223,67 @@ namespace SpaceSim
             }
         }
 
+        //public void Update(float dt)
+        //{
+        //    //Contient le totale d'accélération subit à cause de la gravité
+        //    Vector2f totAcc;
+
+        //    //Applique l'accélération sur tout les corps due à la gravité
+        //    for(int i = 0; i < _bodies.Count; i++)
+        //    {
+        //        totAcc = new Vector2f(0f, 0f);
+        //        for(int j = 0; j < _bodies.Count; j++)
+        //        {
+        //            if(j == i) { continue; }
+        //            totAcc += getAccelVec(_bodies[i], _bodies[j]);
+        //        }
+        //        _bodies[i].Velocity += totAcc;
+        //    }
+
+        //    //Met à jour tout les corps céléstes
+        //    foreach(Particle body in _bodies)
+        //    {
+        //        body.Update(dt);
+        //    }
+        //}
         public void Update(float dt)
         {
-            //Contient le totale d'accélération subit à cause de la gravité
-            Vector2f totAcc;
-
-            //Applique l'accélération sur tout les corps due à la gravité
-            for(int i = 0; i < _bodies.Count; i++)
+            //Calcule l'accélération subit par chaque particule à cause de la gravité avec la methode Barnes-Hut
+            foreach (Particle p in _bodies)
             {
-                totAcc = new Vector2f(0f, 0f);
-                for(int j = 0; j < _bodies.Count; j++)
+                Vector2f totAcc = new Vector2f(0f, 0f); //Contient le totale d'accélération subit à cause de la gravité
+                QuadTree node = qt.FoundParticleNode(p); //Trouve le noeud qui contient la particule à calculer
+                NodeType currentType = node.Type; //Contient le type du noeud actuel
+                QuadTree currentNode = node; //Contient le noeud actuel
+                QuadTree calcNode; //Contient le noeud de calcul
+
+                //Continue tant que la racine n'as pas étée atteinte
+                while (currentNode.Type != NodeType.Root)
                 {
-                    if(j == i) { continue; }
-                    totAcc += getAccelVec(_bodies[i], _bodies[j]);
+                    //Calcule l'accélération subit selon les noeud voisin
+                    for (int i = 1; i <= 4; i++)
+                    {
+                        if ((NodeType)i == currentType) { continue; }
+                        calcNode = currentNode.GetSibling((NodeType)i);
+                        if (calcNode != currentNode)
+                        {
+                            totAcc += getAccelVec(node.GetCenterOfMass(), calcNode.GetCenterOfMass());
+                        }
+                        else
+                        {
+                            Console.WriteLine("[Corrected] The error has been catched [Error:GetSibling]");
+                        }
+                    }
+
+                    //Passe au noeud parent
+                    currentNode = currentNode.GetParent();
+                    currentType = currentNode.Type;
                 }
-                _bodies[i].Velocity += totAcc;
+
+                p.Velocity += totAcc;
             }
 
-            //Met à jour tout les corps céléstes
-            foreach(Particle body in _bodies)
+            foreach (Particle body in _bodies)
             {
                 body.Update(dt);
             }
@@ -272,7 +316,20 @@ namespace SpaceSim
             float angle = (float)Math.Atan2(dy, dx);
             return new Vector2f((float)Math.Cos(angle) * acc, (float)Math.Sin(angle) * acc);
         }
+        Vector2f getAccelVec(CenterOfMass c1, CenterOfMass c2)
+        {
+            //Calcule la distance entre de corps
+            float dx = c2.Position.X - c1.Position.X;
+            float dy = c2.Position.Y - c1.Position.Y;
+            float d2 = (float)Math.Sqrt(dx * dx + dy * dy);
 
+            //Calcule l'accélération produite par la gravité
+            float acc = c2.Mass / (d2 + 1);
+
+            //Transforme l'accélération en vecteur
+            float angle = (float)Math.Atan2(dy, dx);
+            return new Vector2f((float)Math.Cos(angle) * acc, (float)Math.Sin(angle) * acc);
+        }
         public void AddBody(params Particle[] b)
         {
             foreach(Particle body in b)
@@ -295,6 +352,11 @@ namespace SpaceSim
         {
             get { return _bodies; }
             set { _bodies = value; }
+        }
+
+        public QuadTree QuadTree
+        {
+            set { qt = value; }
         }
     }
 

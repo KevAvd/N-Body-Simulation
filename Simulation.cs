@@ -34,13 +34,6 @@ namespace SpaceSim
 
             while (_window.IsOpen)
             {
-                //Affiche le nombre d'image par seconde
-                Console.SetCursorPosition(0, 0);
-                Console.WriteLine("FPS: {0:0.00}", 1 / _elapsedTime);
-
-                Console.WriteLine("{0}          ", (_obj[0] as Camera).View.Size);
-                Console.WriteLine("{0}          ", (_obj[0] as Camera).View.Center);
-
                 //Obtient le temps écoulé depuis la dernière image
                 _elapsedTime = _clock.ElapsedTime.AsSeconds();
 
@@ -70,7 +63,7 @@ namespace SpaceSim
         void Load()
         {
             Random rnd = new Random();
-            _qt = new QuadTree(new Rectangle(_window.Size.X/2, _window.Size.Y / 2, _window.Size.X / 2, _window.Size.Y / 2), 10);
+            _qt = new QuadTree(new Rectangle(_window.Size.X/2, _window.Size.Y / 2, _window.Size.X / 2, _window.Size.Y / 2));
             _obj.Add(new Camera(_window.Size.X, _window.Size.Y, 500));
             _ps.GenBodies(11, 1000, 20000, new Vector2f(400, 300), 400000);
             _ps.RndVel(600000, 600000,0);
@@ -111,7 +104,10 @@ namespace SpaceSim
             //{
             //    leftClick = false;
             //}
-
+            if (Keyboard.IsKeyPressed(Keyboard.Key.Q))
+            {
+                Console.Clear();
+            }
             float minX = float.PositiveInfinity;
             float maxX = float.NegativeInfinity;
             float minY = float.PositiveInfinity;
@@ -124,31 +120,31 @@ namespace SpaceSim
                 float y = p.Position.Y;
                 if(x < minX)
                 {
-                    minX = x;
+                    minX = x - 1;
                 }
                 if(x > maxX)
                 {
-                    maxX = x;
+                    maxX = x + 1;
                 }
                 if(y < minY)
                 {
-                    minY = y;
+                    minY = y - 1;
                 }
                 if(y > maxY)
                 {
-                    maxY = y;
+                    maxY = y + 1;
                 }
             }
 
-            float w = (maxX - minX) / 2 + 10;
-            float h = (maxY - minY) / 2 + 10;
-            _ps.Update(_elapsedTime);
-            _qt = new QuadTree(new Rectangle(w + minX, h + minY, w, h), 10);
+            float w = (maxX - minX) / 2;
+            float h = (maxY - minY) / 2;
+            _qt = new QuadTree(new Rectangle(w + minX, h + minY, w, h));
             foreach (Particle p in _ps.Bodies)
             {
                 _qt.Insert(p);
             }
-
+            _ps.QuadTree = _qt;
+            _ps.Update(_elapsedTime);
             foreach (IObject obj in _obj)
             {
                 obj.Update(_elapsedTime);
@@ -162,6 +158,7 @@ namespace SpaceSim
         {
             _ps.Render(_window);
             _qt.Draw(_window);
+
             foreach (IObject obj in _obj)
             {
                 obj.Render(_window);
