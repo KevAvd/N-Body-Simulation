@@ -65,7 +65,7 @@ namespace SpaceSim
             Random rnd = new Random();
             _qt = new QuadTree(new Rectangle(_window.Size.X/2, _window.Size.Y / 2, _window.Size.X / 2, _window.Size.Y / 2));
             _obj.Add(new Camera(_window.Size.X, _window.Size.Y, 500));
-            _ps.GenBodies(11, 1000, 20000, new Vector2f(400, 300), 400000);
+            _ps.GenBodies(1000, 1000, 20000, new Vector2f(400, 300), 400000);
             _ps.RndVel(600000, 600000,0);
             Particle pMassive = new Particle(_ps.GetTotalMass()*999, 400000, Color.Blue, new Vector2f(400, 300 + 400000 * 4));
             _ps.AddBody(pMassive);
@@ -120,19 +120,19 @@ namespace SpaceSim
                 float y = p.Position.Y;
                 if(x < minX)
                 {
-                    minX = x - 1;
+                    minX = x - 1000000;
                 }
                 if(x > maxX)
                 {
-                    maxX = x + 1;
+                    maxX = x + 1000000;
                 }
                 if(y < minY)
                 {
-                    minY = y - 1;
+                    minY = y - 1000000;
                 }
                 if(y > maxY)
                 {
-                    maxY = y + 1;
+                    maxY = y + 1000000;
                 }
             }
 

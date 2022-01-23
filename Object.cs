@@ -253,17 +253,16 @@ namespace SpaceSim
             {
                 Vector2f totAcc = new Vector2f(0f, 0f); //Contient le totale d'accélération subit à cause de la gravité
                 QuadTree node = qt.FoundParticleNode(p); //Trouve le noeud qui contient la particule à calculer
-                NodeType currentType = node.Type; //Contient le type du noeud actuel
                 QuadTree currentNode = node; //Contient le noeud actuel
                 QuadTree calcNode; //Contient le noeud de calcul
 
-                //Continue tant que la racine n'as pas étée atteinte
+                //Continue tant que la racine n'as pas été atteinte
                 while (currentNode.Type != NodeType.Root)
                 {
                     //Calcule l'accélération subit selon les noeud voisin
                     for (int i = 1; i <= 4; i++)
                     {
-                        if ((NodeType)i == currentType) { continue; }
+                        if ((NodeType)i == currentNode.Type) { continue; }
                         calcNode = currentNode.GetSibling((NodeType)i);
                         if (calcNode != currentNode)
                         {
@@ -277,7 +276,6 @@ namespace SpaceSim
 
                     //Passe au noeud parent
                     currentNode = currentNode.GetParent();
-                    currentType = currentNode.Type;
                 }
 
                 p.Velocity += totAcc;
@@ -324,7 +322,7 @@ namespace SpaceSim
             float d2 = (float)Math.Sqrt(dx * dx + dy * dy);
 
             //Calcule l'accélération produite par la gravité
-            float acc = c2.Mass / (d2 + 1);
+            float acc = c2.Mass / (d2 + 100);
 
             //Transforme l'accélération en vecteur
             float angle = (float)Math.Atan2(dy, dx);

@@ -26,12 +26,12 @@ namespace SpaceSim.BarnesHut
             float x = p.Position.X;
             float y = p.Position.Y;
 
-            if(x > this.x-w && x < this.x+w && y > this.y-h && y < this.y + h) { return true; }
+            if(x >= this.x-w && x <= this.x+w && y >= this.y-h && y <= this.y + h) { return true; }
             else { return false; }
         }
     }
 
-    struct CenterOfMass
+    class CenterOfMass
     {
         float mass;
         Vector2f position;
@@ -95,13 +95,14 @@ namespace SpaceSim.BarnesHut
         /// <param name="r"> Zone du noeud </param>
         /// <param name="cap"> Capacité du noeud </param>
         /// <param name="p"> Parent du noeud </param>
-        public QuadTree(Rectangle r, QuadTree p, NodeType t, uint l)
+        QuadTree(Rectangle r, QuadTree p, NodeType t, uint l)
         {
             this.r = r;
             parent = p;
             type = t;
             layer = l;
         }
+
         /// <summary>
         /// Insert un point dans le noeud actuel
         /// </summary>
@@ -126,7 +127,7 @@ namespace SpaceSim.BarnesHut
                 se.Insert(p);
             }
             //Subdivise le noeud en 4 lorsque la capacité est dépassée
-            if(particles.Count > capacity)
+            else if(particles.Count > capacity)
             {
                 if (!(r.w / 2 < 1 || r.h / 2 < 1))
                 {
@@ -189,37 +190,52 @@ namespace SpaceSim.BarnesHut
         }
         public QuadTree FoundParticleNode(Particle p)
         {
-            if(this.type == NodeType.Root)
-            {
-                if (!particles.Contains(p))
-                {
-                    return null;
-                    Console.WriteLine("[Error] The QuadTree doesn't contain the particle");
-                }
-            }
-
+            //Cas de base
             if (!divided)
             {
                 return this;
             }
 
+            //Cherche la particule dans les enfants
             if (nw.Particles.Contains(p))
             {
                 return nw.FoundParticleNode(p);
             }
-            else if (ne.Particles.Contains(p))
+            if (ne.Particles.Contains(p))
             {
                 return ne.FoundParticleNode(p);
             }
-            else if (sw.Particles.Contains(p))
+            if (sw.Particles.Contains(p))
             {
                 return sw.FoundParticleNode(p);
             }
-            else if (se.Particles.Contains(p))
+            if (se.Particles.Contains(p))
             {
                 return se.FoundParticleNode(p);
             }
 
+            //Particule non trouvée
+            Console.WriteLine("[Error] QuadTree doesn't contains the researched particle");
+            Console.WriteLine("[PARTICLE][POSITION] X:({0}), Y({1})", p.Position.X, p.Position.Y);
+            QuadTree root = this;
+            do
+            {
+                root = root.GetParent();
+            }while (root.type != NodeType.Root);
+            Console.WriteLine("[NODE] layer({0}), type({1})", this.layer,this.type);
+            Console.WriteLine("[NODE][PARENT] layer({0}), type({1})", this.parent.layer, this.parent.type);
+            if (root.Particles.Contains(p)) { Console.WriteLine("[ROOT] QuadTree's root contains the researched particle"); }
+            else { Console.WriteLine("[ROOT] QuadTree's root doesn't contain the researched particle"); }
+            if (this.particles.Contains(p)) { Console.WriteLine("[NODE] this node contain the researched particle"); }
+            else { Console.WriteLine("[NODE] this node doesn't contain the researched particle"); }
+            if (ne.Particles.Contains(p)) { Console.WriteLine("[NODE][CHILD:NE] this node contain the researched particle"); }
+            else { Console.WriteLine("[NODE][CHILD:NE] this node doesn't contain the researched particle"); }
+            if (nw.Particles.Contains(p)) { Console.WriteLine("[NODE][CHILD:NW] this node contain the researched particle"); }
+            else { Console.WriteLine("[NODE][CHILD:NW] this node doesn't contain the researched particle"); }
+            if (se.Particles.Contains(p)) { Console.WriteLine("[NODE][CHILD:SE] this node contain the researched particle"); }
+            else { Console.WriteLine("[NODE][CHILD:SE] this node doesn't contain the researched particle"); }
+            if (sw.Particles.Contains(p)) { Console.WriteLine("[NODE][CHILD:SW] this node contain the researched particle"); }
+            else { Console.WriteLine("[NODE][CHILD:SW] this node doesn't contain the researched particle"); }
             return this;
         }
         public CenterOfMass GetCenterOfMass()
@@ -228,10 +244,9 @@ namespace SpaceSim.BarnesHut
 
             foreach(Particle p in particles)
             {
-                com.Position += p.Position;
                 com.Mass += p.Mass;
             }
-
+            com.Position = new Vector2f(r.x,r.y);
             return com;
         }
 
@@ -267,6 +282,11 @@ namespace SpaceSim.BarnesHut
         public List<Particle> Particles
         {
             get { return particles; }
+        }
+
+        public Rectangle Rectangle
+        {
+            get { return r; }
         }
     }
 }

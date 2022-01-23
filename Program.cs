@@ -1,13 +1,11 @@
-﻿using SpaceSim;
-
-namespace SpaceSim
+﻿namespace SpaceSim
 {
     static class Program
     {
         static void Main()
         {
-            Simulation mySim = new Simulation(800, 600, "My simulation");
-            mySim.Run();
+            Simulation sim = new Simulation(800, 600, "My simulation");
+            sim.Run();
         }
     }
 }
