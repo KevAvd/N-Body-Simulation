@@ -28,7 +28,7 @@ namespace NBodySim
         public void Run()
         {
             Load();
-
+            int cursorTop = Console.CursorTop;
             while (_window.IsOpen)
             {
                 //Obtient le temps écoulé depuis la dernière image
@@ -63,9 +63,9 @@ namespace NBodySim
 
             Random rnd = new Random();
 
-            uint nbrOfBodies = 10;
+            uint nbrOfBodies = 10000;
             int minMass = 100;
-            int maxMass = 1000;
+            int maxMass = 100;
             Vector2f center = new Vector2f(0, 0);
             int radius = 10000;
             //Génère n nombre de corps céléste
@@ -92,8 +92,30 @@ namespace NBodySim
                 } while (d > radius);
 
                 //Ajoute le corps généré dans le système céléste
-                particles.Add(new Particle(mass, mass, color, position));
+                particles.Add(new Particle(mass, 100, color, position, i));
             }
+            int min = 5500;
+            int max = 5500;
+            float heading = (float)Math.PI / 4f;
+            for (int i = 0; i < particles.Count; i++)
+            {
+                Vector2f vel = particles[i].Velocity;
+                float speed = rnd.Next(min, max);
+                //heading = (float)rnd.NextDouble() * (float)Math.PI * 2.0f;
+                if (i > particles.Count / 2)
+                {
+                    vel.X = (float)Math.Cos(heading + Math.PI / 2f) * speed;
+                    vel.Y = (float)Math.Sin(heading + Math.PI / 2f) * speed;
+                }
+                else
+                {
+                    vel.X = (float)Math.Cos(heading) * speed;
+                    vel.Y = (float)Math.Sin(heading) * speed;
+                }
+                particles[i].Velocity = vel;
+            }
+
+            particles.Add(new Particle(99999999999, 1000, Color.Yellow, new Vector2f(0, 10000 * 4f), 10000));
         }
 
         /// <summary>
@@ -133,10 +155,24 @@ namespace NBodySim
 
             float w = (maxX - minX) / 2;
             float h = (maxY - minY) / 2;
+
+            w = w < h ? h : w;
+            h = w;
+
             qt = new QuadTree(new Rectangle(w + minX, h + minY, w, h));
             foreach (Particle p in particles)
             {
-                qt.insert(p);
+                qt.Insert(p);
+            }
+
+            foreach(Particle p in particles)
+            {
+                qt.CalcAccel(p, 2f, 99);
+            }
+
+            foreach (Particle p in particles)
+            {
+                p.Update(_elapsedTime);
             }
         }
 
@@ -150,7 +186,7 @@ namespace NBodySim
             {
                 p.Render(_window);
             }
-            qt.Draw(_window);
+            //qt.Draw(_window);
         }
     }
 }

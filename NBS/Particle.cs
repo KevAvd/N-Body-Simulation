@@ -6,6 +6,7 @@ namespace NBodySim
 {
     internal class Particle
     {
+        int _id;
         float _mass;
         float _radius;
         Color _color;
@@ -18,8 +19,9 @@ namespace NBodySim
         /// <param name="m"> Masse </param>
         /// <param name="r"> Rayon </param>
         /// <param name="c"> Couleur </param>
-        public Particle(float m, float r, Color c, Vector2f p)
+        public Particle(float m, float r, Color c, Vector2f p, int id)
         {
+            _id = id;
             _mass = m;
             _radius = r;
             _color = c;
@@ -103,6 +105,11 @@ namespace NBodySim
         {
             get { return _velocity; }
             set {_velocity = value; }
+        }
+
+        public int ID
+        {
+            get { return _id; }
         }
     }
 }

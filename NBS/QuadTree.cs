@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using SFML.Graphics;
+﻿using SFML.Graphics;
 using SFML.System;
-using SFML.Window;
 
 namespace NBodySim
 {
@@ -25,6 +21,7 @@ namespace NBodySim
             return (x >= this.x - w && x <= this.x + w && y >= this.y - h && y <= this.y + h) ? true : false;
         }
     }
+
     class QuadTree
     {
         //taille du noeud
@@ -32,25 +29,18 @@ namespace NBodySim
         //Contenu du noeud
         List<Particle> particles = new List<Particle>();
         //Centre de mass
-        float centerOfMass;
+        float totalMass = 0;
         //Position du centre de mass
-        Vector2f comPosition;
-        //Niveau du noeud
-        uint layer;
-        //Parent du noeud
-        QuadTree parent;
+        Vector2f centerOfMass;
         //Enfant du noeud
-        QuadTree nw;
-        QuadTree ne;
-        QuadTree sw;
-        QuadTree se;
+        QuadTree[] child = new QuadTree[4];
 
         public QuadTree(Rectangle r)
         {
             this.r = r;
         }
 
-        public void insert(Particle p)
+        public void Insert(Particle p)
         {
             //Ne fait rien si la particule n'est pas à l'intérieur du noeud
             if(!r.Contains(p))
@@ -58,30 +48,27 @@ namespace NBodySim
                 return;
             }
 
-            if(particles.Count == 0)
-            {
-                particles.Add(p);
-                UpdateCOM();
-            }
+            //Ajoute une particule dans le noeud
+            particles.Add(p);
 
             if(particles.Count == 1)
             {
-                particles.Add(p);
+                //Met à jour le centre de mass
+                Update();
+            }
+            else if(particles.Count == 2)
+            {
+                //Divise le noeuds en quatre
                 Subdivide();
             }
-
-            if(particles.Count > 1)
+            else if(particles.Count > 2)
             {
-                particles.Add(p);
-                nw.insert(p);
-                ne.insert(p);
-                sw.insert(p);
-                se.insert(p);
-                UpdateCOM();
-                nw.UpdateCOM();
-                ne.UpdateCOM();
-                sw.UpdateCOM();
-                se.UpdateCOM();
+                //Insert la particule dans tout les noeuds enfants
+                for (int i = 0; i < child.Length; i++) { if (child[i] != null) { child[i].Insert(p); } }
+
+                //Met à jour le centre de mass
+                Update();
+                for (int i = 0; i < child.Length; i++) { if (child[i] != null) { child[i].Update(); } }
             }
         }
 
@@ -90,36 +77,71 @@ namespace NBodySim
             //Ne divise seulement lorsque c'est possible
             if(r.h / 2 < 1 || r.w / 2 < 1)
             {
-                Console.WriteLine("[Can't divide more]");
                 return;
             }
 
             //Crée les enfants du noeud
-            nw = new QuadTree(new Rectangle(r.x - r.w / 2, r.y - r.h / 2, r.w / 2, r.h / 2));
-            ne = new QuadTree(new Rectangle(r.x + r.w / 2, r.y - r.h / 2, r.w / 2, r.h / 2));
-            sw = new QuadTree(new Rectangle(r.x - r.w / 2, r.y + r.h / 2, r.w / 2, r.h / 2));
-            se = new QuadTree(new Rectangle(r.x + r.w / 2, r.y + r.h / 2, r.w / 2, r.h / 2));
+            child[0] = new QuadTree(new Rectangle(r.x - r.w / 2, r.y - r.h / 2, r.w / 2, r.h / 2));
+            child[1] = new QuadTree(new Rectangle(r.x + r.w / 2, r.y - r.h / 2, r.w / 2, r.h / 2));
+            child[2] = new QuadTree(new Rectangle(r.x - r.w / 2, r.y + r.h / 2, r.w / 2, r.h / 2));
+            child[3] = new QuadTree(new Rectangle(r.x + r.w / 2, r.y + r.h / 2, r.w / 2, r.h / 2));
 
             //Insert les particules dans les enfants du noeuds
             foreach (Particle prt in particles)
             {
-                nw.insert(prt);
-                ne.insert(prt);
-                sw.insert(prt);
-                se.insert(prt);
+                for (int i = 0; i < child.Length; i++) { if (child[i] != null) { child[i].Insert(prt); } }
             }
 
             //Met à jour les centres de masses
-            UpdateCOM();
-            nw.UpdateCOM();
-            ne.UpdateCOM();
-            sw.UpdateCOM();
-            se.UpdateCOM();
+            Update();
+            for (int i = 0; i < child.Length; i++) { if (child[i] != null) { child[i].Update(); } }
         }
 
-        void UpdateCOM()
+        void Update()
         {
+            if (particles.Count > 0)
+            {
+                Particle p = particles[particles.Count - 1];
+                centerOfMass.X = centerOfMass.X * totalMass;
+                centerOfMass.Y = centerOfMass.Y * totalMass;
+                totalMass += p.Mass;
+                centerOfMass += new Vector2f(p.Mass * p.Position.X, p.Mass * p.Position.Y);
+                centerOfMass.X /= totalMass;
+                centerOfMass.Y /= totalMass;
+            }
+        }
 
+        public void CalcAccel(Particle p, float accuracy, float smoothValue)
+        {
+            if(particles.Count == 1)
+            {
+                if (p.ID != particles[0].ID)
+                {
+                    float dx = centerOfMass.X - p.Position.X;
+                    float dy = centerOfMass.Y - p.Position.Y;
+                    float d2 = dx * dx + dy * dy;
+                    float accel = totalMass / (d2 + smoothValue);
+                    float angle = (float)Math.Atan2(dy, dx);
+                    p.Velocity += new Vector2f((float)Math.Cos(angle) * accel, (float)Math.Sin(angle) * accel);
+                }
+            }
+            else if(particles.Count > 1)
+            {
+                float s = r.w;
+                float dy = centerOfMass.Y - p.Position.Y;
+                float dx = centerOfMass.X - p.Position.X;
+                float d = (float)Math.Sqrt(dx * dx + dy * dy);
+                if (s / d <= accuracy)
+                {
+                    float accel = totalMass / (d*d + smoothValue);
+                    float angle = (float)Math.Atan2(dy, dx);
+                    p.Velocity += new Vector2f((float)Math.Cos(angle) * accel, (float)Math.Sin(angle) * accel);
+                }
+                else
+                {
+                    for (int i = 0; i < child.Length; i++) { if (child[i] != null) { child[i].CalcAccel(p, accuracy, smoothValue); } }
+                }
+            }
         }
 
         /// <summary>
@@ -133,18 +155,11 @@ namespace NBodySim
             vertices[1] = new Vertex(new Vector2f(r.x + r.w, r.y - r.h), Color.Red);
             vertices[2] = new Vertex(new Vector2f(r.x + r.w, r.y + r.h), Color.Red);
             vertices[3] = new Vertex(new Vector2f(r.x - r.w, r.y + r.h), Color.Red);
-            vertices[4] = new Vertex(new Vector2f(r.x - r.w, r.y - r.h), Color.Red);
+            vertices[4] = vertices[0];
             w.Draw(vertices, PrimitiveType.LineStrip);
-            if (ne != null) { ne.Draw(w); }
-            if (nw != null) { nw.Draw(w); }
-            if (se != null) { se.Draw(w); }
-            if (sw != null) { sw.Draw(w); }
+            for(int i = 0; i < child.Length; i++) { if (child[i] != null) { child[i].Draw(w); } }
         }
 
-        public uint Layer
-        {
-            get { return layer; }
-        }
         public List<Particle> Particles
         {
             get { return particles; }
