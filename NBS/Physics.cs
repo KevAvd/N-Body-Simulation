@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
@@ -8,12 +9,7 @@ namespace NBodySim
     internal class Physics
     {
         QuadTree qt;
-        List<Particle> particles;
-
-        public Physics(List<Particle> p)
-        {
-            particles = p;
-        }
+        List<Particle> particles = new List<Particle>();
 
         public void CreateQuadTree()
         {
@@ -67,9 +63,39 @@ namespace NBodySim
             }
         }
 
-        public void CalcForce()
+        public void CalcForce(float accuracy, float smoothValue)
         {
+            foreach (Particle p in particles)
+            {
+                qt.CalcAccel(p, accuracy, smoothValue);
+            }
+        }
 
+        public void Update(float dt)
+        {
+            foreach(Particle p in particles)
+            {
+                p.Update(dt);
+            }
+        }
+
+        public void DrawQT(RenderWindow w)
+        {
+            qt.Draw(w);
+        }
+
+        public void Render(RenderWindow w)
+        {
+            foreach (Particle p in particles)
+            {
+                p.Render(w);
+            }
+        }
+
+        public List<Particle> Particles
+        {
+            get { return particles; }
+            set { particles = value; }
         }
     }
 }

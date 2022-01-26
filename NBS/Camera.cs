@@ -9,8 +9,6 @@ namespace NBodySim
     {
         View _view;
         float _speed;
-        bool _cClick = false;
-        bool _vClick = false;
 
         /// <summary>
         /// Constructeur
@@ -31,50 +29,35 @@ namespace NBodySim
             Vector2f size = _view.Size;
 
             //Gère les entrées
-            if (Keyboard.IsKeyPressed(Keyboard.Key.W))
+            if (InputHandler.IsKeyPressed(Keyboard.Key.W))
             {
                 p.Y -= _speed * dt;
             }
-            if (Keyboard.IsKeyPressed(Keyboard.Key.A))
+            if (InputHandler.IsKeyPressed(Keyboard.Key.A))
             {
                 p.X -= _speed * dt;
             }
-            if (Keyboard.IsKeyPressed(Keyboard.Key.S))
+            if (InputHandler.IsKeyPressed(Keyboard.Key.S))
             {
                 p.Y += _speed * dt;
             }
-            if (Keyboard.IsKeyPressed(Keyboard.Key.D))
+            if (InputHandler.IsKeyPressed(Keyboard.Key.D))
             {
                 p.X += _speed * dt;
             }
-            if (Keyboard.IsKeyPressed(Keyboard.Key.C))
+            if (InputHandler.IsKeyClicked(Keyboard.Key.C))
             {
-                if (!_cClick)
-                {
-                    size.X = 2 * size.X;
-                    size.Y = 2 * size.Y;
-                    _speed *= 2;
-                    _cClick = true;
-                }
+                size.X = 2 * size.X;
+                size.Y = 2 * size.Y;
+                _speed *= 2;
             }
-            else
+            if (InputHandler.IsKeyClicked(Keyboard.Key.V))
             {
-                _cClick = false;
+                size.X = size.X / 2;
+                size.Y = size.Y / 2;
+                _speed /= 2;
             }
-            if (Keyboard.IsKeyPressed(Keyboard.Key.V))
-            {
-                if (!_vClick)
-                {
-                    size.X = size.X / 2;
-                    size.Y = size.Y / 2;
-                    _speed /= 2;
-                    _vClick = true;
-                }
-            }
-            else
-            {
-                _vClick = false;
-            }
+            
 
             _view.Center = p;
             _view.Size = size;
